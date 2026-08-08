@@ -1,0 +1,32 @@
+name: Sync upstream branches
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone target repo (bare)
+        run: git clone --bare https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/Mush-iii/PULS3emu.git target.git
+
+      - name: Add upstream remote and fetch all branches
+        working-directory: target.git
+        run: |
+          git remote add upstream https://github.com/Detanup01/gbe_fork.git
+          git fetch upstream '+refs/heads/*:refs/remotes/upstream/*'
+
+      - name: Push each upstream branch to origin (skip main)
+        working-directory: target.git
+        run: |
+          for ref in $(git branch -r | grep 'upstream/' | sed 's/.*upstream\///'); do
+            if [ "$ref" = "main" ]; then
+              echo "Skipping $ref to avoid overwriting your existing main"
+              continue
+            fi
+            echo "Pushing $ref"
+            git push origin "refs/remotes/upstream/$ref:refs/heads/$ref"
+          done
